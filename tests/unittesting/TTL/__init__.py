@@ -7,7 +7,3 @@
 # https://opensource.org/licenses/MIT.
 ###
 
-
-from .TestSelfLock import TestSelfLock
-from .TTL.TestObjFactory import TestObjFactory
-
