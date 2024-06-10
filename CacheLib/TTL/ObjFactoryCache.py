@@ -10,6 +10,8 @@
 
 import time
 
+from collections import deque
+
 from .. import LockwSLD
 from .Interfaces import TTL, Terminable
 
@@ -34,6 +36,14 @@ class ObjFactoryCache(TTL):
 	By tracking the instances, we can attempt to call `Terminate` method on the
 	instance to clean up resources during terminating in a multi-threaded
 	scenario.
+	'''
+
+	IDLE_ITEM_CONTAINER_CLASS = deque
+	'''
+	The container class used to store idle items.
+
+	The default is `collections.deque`, since we only works on both ends of the
+	container (append and pop), so `deque` should provide better performance.
 	'''
 
 	DEFAULT_ITEM_BASE_CLASS = Terminable
@@ -61,25 +71,49 @@ class ObjFactoryCache(TTL):
 		self.objKwargs = objKwargs
 
 		self.objLock = LockwSLD.LockwSLD()
-		self.idleObjs = []
+		self.idleObjs = self.IDLE_ITEM_CONTAINER_CLASS()
 		self.inUseObjs = {}
 
 	def CleanUpExpiredLocked(self) -> None:
-		currTime = time.time()
-		# remove expired objects
-		notExpired = []
-		for lastAcc, obj in self.idleObjs:
-			if lastAcc + self.ttl < currTime:
-				# expired
-				obj.Terminate()
-			else:
-				notExpired.append((lastAcc, obj))
 
-		self.idleObjs = notExpired
+		currTime = time.time()
+		while (
+			(len(self.idleObjs) > 0) and # at least 1 item in the queue and
+			((self.idleObjs[0][0] + self.ttl) < currTime) # the oldest item is expired
+		):
+			# remove expired objects
+			_, obj = self.idleObjs.popleft()
+			obj.Terminate()
 
 	def CleanUpExpired(self) -> None:
 		with self.objLock:
 			self.CleanUpExpiredLocked()
+
+	def _PopIdleObjForUseLocked(self) -> Terminable:
+		'''
+		The position of the item being popped from the idle queue affects the
+		outcome of the overall cache performance.
+
+		- If we pop from the left (the oldest item), the cache will be more
+		  lenient to keep as much objects as possible, since it keeps refreshing
+		  the oldest item.
+		  This strategy consumes more memory, but it is more tolerant to sudden
+		  burst of requests.
+		- If we pop from the right (the newest item), the cache will be more
+		  aggressive to remove a number of objects that are not needed for
+		  a while, since it keeps refreshing newer items and let the older
+		  no-needed items expire.
+		  This strategy consumes less memory, but it is less tolerant to sudden
+		  burst of requests.
+		- A potential balanced strategy would be using a random position to pop
+		  the item.
+
+		Here we pop from the right (the newest item).
+
+		Subclasses can override this method to change the popping strategy.
+		'''
+		_, obj = self.idleObjs.pop()
+		return obj
 
 	def Get(self, trackInUse: bool = DEFAULT_TRACK_INST_IN_USE) -> Terminable:
 		with self.objLock:
@@ -89,7 +123,7 @@ class ObjFactoryCache(TTL):
 				# create a new object
 				obj: Terminable = self.objCls(*self.objArgs, **self.objKwargs)
 			else:
-				obj: Terminable = self.idleObjs.pop()[1]
+				obj: Terminable = self._PopIdleObjForUseLocked()
 
 			if trackInUse:
 				self.inUseObjs[obj.IDInt] = obj
@@ -103,6 +137,7 @@ class ObjFactoryCache(TTL):
 			if obj.IDInt in self.inUseObjs:
 				del self.inUseObjs[obj.IDInt]
 
+			# the newest item is always appended to the right
 			self.idleObjs.append((time.time(), obj))
 
 	def Untrack(self, obj: Terminable) -> None:
@@ -114,11 +149,11 @@ class ObjFactoryCache(TTL):
 
 	def Terminate(self) -> None:
 		with self.objLock:
-			for _, obj in self.idleObjs:
+			while len(self.idleObjs) > 0:
+				_, obj = self.idleObjs.popleft()
 				obj.Terminate()
 			for _, obj in self.inUseObjs.items():
 				obj.Terminate()
-			self.idleObjs = []
 			self.inUseObjs = {}
 
 	def __len__(self) -> int:
