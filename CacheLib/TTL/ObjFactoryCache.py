@@ -13,10 +13,10 @@ import time
 from collections import deque
 
 from .. import LockwSLD
-from .Interfaces import TTL, Terminable
+from .Interfaces import ClassWideTTL, Terminable
 
 
-class ObjFactoryCache(TTL):
+class ObjFactoryCache(ClassWideTTL):
 	'''
 	## ObjFactoryCache - Object Factory Cache
 

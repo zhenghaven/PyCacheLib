@@ -10,4 +10,5 @@
 
 from .TestSelfLock import TestSelfLock
 from .TTL.TestObjFactory import TestObjFactory
+from .TTL.TestMulKeyMulTTLValue import TestMulKeyMulTTLValue
 
