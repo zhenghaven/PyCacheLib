@@ -37,6 +37,9 @@ setup(
 	],
 
 	entry_points     = {
+		'console_scripts': [
+			'{pkgName}={pkgName}.__main__:main'.format(pkgName=PACKAGE_INFO['name']),
+		]
 	},
 )
 
