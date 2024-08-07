@@ -7,3 +7,18 @@
 # https://opensource.org/licenses/MIT.
 ###
 
+
+PACKAGE_INFO = {
+	'name': 'CacheLib',
+	'version': '0.1.3',
+	'author': 'Haofan Zheng',
+	'url': 'https://github.com/zhenghaven/PyCacheLib',
+	'license': 'MIT',
+	'description': 'A simple python cache library',
+}
+
+
+__version__ = PACKAGE_INFO['version']
+__author__ = PACKAGE_INFO['author']
+__license__ = PACKAGE_INFO['license']
+
