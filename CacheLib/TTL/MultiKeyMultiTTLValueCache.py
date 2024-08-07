@@ -62,7 +62,7 @@ class MultiKeyMultiTTLValueCache(TTL):
 			self.CleanUpExpiredLocked()
 			return key in self.__keyValueMap
 
-	def Put(self, item: KeyValueItem) -> None:
+	def Put(self, item: KeyValueItem, raiseIfKeyExist: bool = True) -> None:
 		with self.__storeLock:
 			self.CleanUpExpiredLocked()
 
@@ -72,7 +72,11 @@ class MultiKeyMultiTTLValueCache(TTL):
 			# Check if the keys are already in the cache
 			for key in keys:
 				if key in self.__keyValueMap:
-					raise KeyError(f'Key {key} already exists in cache')
+					if raiseIfKeyExist:
+						raise KeyError(f'Key {key} already exists in cache')
+					else:
+						# The caller wants us to treat this as an normal case
+						return
 
 			# Add the item to the cache
 			for key in keys:
