@@ -54,7 +54,7 @@ class TestMulKeyMulTTLValue(unittest.TestCase):
 	def tearDown(self):
 		pass
 
-	def test_MulKeyMulTTLValue_1TestItemClass(self):
+	def test_TTL_MulKeyMulTTLValue_01TestItemClass(self):
 		keys = [ 12345, 'abc', ]
 		item = TestItemClass(keys=keys, value='value', ttl=1.0)
 		self.assertEqual(item.GetKeys(), keys)
@@ -124,7 +124,7 @@ class TestMulKeyMulTTLValue(unittest.TestCase):
 		if doneEvent is not None:
 			doneEvent.set()
 
-	def test_MulKeyMulTTLValue_2Basics(self):
+	def test_TTL_MulKeyMulTTLValue_02Basics(self):
 		cache = MultiKeyMultiTTLValueCache()
 
 		# Put in the value
@@ -227,7 +227,7 @@ class TestMulKeyMulTTLValue(unittest.TestCase):
 		self.assertEqual(len(cache), 0)
 		self.assertEqual(cache.NumOfKeys(), 0)
 
-	def test_MulKeyMulTTLValue_3CleanUp(self):
+	def test_TTL_MulKeyMulTTLValue_03CleanUp(self):
 		cache = MultiKeyMultiTTLValueCache()
 
 		keys1 = [ 12345, 'abc', ]
@@ -287,7 +287,7 @@ class TestMulKeyMulTTLValue(unittest.TestCase):
 		self.assertTrue(item2.isTerminated.is_set())
 		self.assertTrue(item3.isTerminated.is_set())
 
-	def test_MulKeyMulTTLValue_4MultiThreading(self):
+	def test_TTL_MulKeyMulTTLValue_04MultiThreading(self):
 		cache = MultiKeyMultiTTLValueCache()
 
 		numThreads = 10

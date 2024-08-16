@@ -9,6 +9,7 @@
 
 
 import time
+
 from typing import Union
 
 from sortedcontainers import SortedDict

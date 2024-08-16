@@ -28,7 +28,7 @@ class TestSelfLock(unittest.TestCase):
 			while not toRelease.is_set():
 				time.sleep(0.100) # 100ms
 
-	def test_SelfLock_1Basics(self):
+	def test_SelfLock_01Basics(self):
 		lock = LockwSLD()
 		self.assertFalse(lock.locked())
 		self.assertEqual(lock.HeldBy(), None)
@@ -61,7 +61,7 @@ class TestSelfLock(unittest.TestCase):
 		releaseSignal.set()
 		lockingThread.join()
 
-	def test_SelfLock_2SelfLockDetection(self):
+	def test_SelfLock_02SelfLockDetection(self):
 		# the existing lock in python is not guaranteed that
 		# when a thread holds the lock,
 		# and when it tries to acquire the lock again,

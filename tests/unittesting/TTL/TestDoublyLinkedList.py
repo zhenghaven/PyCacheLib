@@ -121,7 +121,7 @@ class TestDoublyLinkedList(unittest.TestCase):
 		self.assertEqual(len(dll), 0)
 		self.assertEqual(str(dll), f'{self.dllClsName}([])')
 
-	def test_TTL_DoublyLinkedList_07RemoveRandom(self):
+	def test_TTL_DoublyLinkedList_06RemoveRandom(self):
 		numOfItems = 1000
 		l = [ random.randint(0, 10**9) for _ in range(numOfItems) ]
 		dll = DoublyLinkedList()
@@ -138,7 +138,7 @@ class TestDoublyLinkedList(unittest.TestCase):
 			for nodeInList, dataInDll in zip(nodes, dll):
 				self.assertEqual(nodeInList.data, dataInDll)
 
-	def test_TTL_DoublyLinkedList_08ThreadSafe(self):
+	def test_TTL_DoublyLinkedList_07ThreadSafe(self):
 		numOfThreads = 10
 		numOfItemsPerThread = 1000
 

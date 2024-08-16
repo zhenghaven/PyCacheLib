@@ -55,7 +55,7 @@ class TestObjFactory(unittest.TestCase):
 	def tearDown(self):
 		pass
 
-	def test_ObjFactory_1Basics(self):
+	def test_TTL_ObjFactory_01Basics(self):
 		objFactoryCache = ObjFactoryCache(
 			ttl=1.0,
 			objCls=TestItemClass,
@@ -133,7 +133,7 @@ class TestObjFactory(unittest.TestCase):
 		self.assertEqual(len(objFactoryCache), 0)
 		self.assertEqual(objFactoryCache.NumberOfIdle(), 0)
 
-	def test_ObjFactory_2Threading(self):
+	def test_TTL_ObjFactory_02Threading(self):
 		objFactoryCache = ObjFactoryCache(
 			ttl=1.0,
 			objCls=TestItemClass,
@@ -225,7 +225,7 @@ class TestObjFactory(unittest.TestCase):
 		for th in threads:
 			th.join()
 
-	def test_ObjFactory_3Untrack(self):
+	def test_TTL_ObjFactory_03Untrack(self):
 		objFactoryCache = ObjFactoryCache(
 			ttl=1.0,
 			objCls=TestItemClass,
