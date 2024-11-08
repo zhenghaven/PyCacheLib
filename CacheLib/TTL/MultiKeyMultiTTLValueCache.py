@@ -27,6 +27,18 @@ class MultiKeyMultiTTLValueCache(TTL):
 		self.__timeQueue = SortedDict()
 		self.__keyValueMap = dict()
 
+	def __RemoveKeysFromLUT(self, keys: list[KeyValueKey]) -> None:
+		for key in keys:
+			poppedItem = self.__keyValueMap.pop(key, None)
+			if poppedItem is None:
+				self.logger.warning(
+					f'Failed to remove key {key} from the lookup table'
+				)
+
+	def __InvalidateItem(self, item: KeyValueItem) -> None:
+		item.Terminate()
+		self.__RemoveKeysFromLUT(item.GetKeys())
+
 	def CleanUpExpiredLocked(self, debugLogTimestamp: bool = False) -> None:
 		currTimeNS = time.time_ns()
 
@@ -44,14 +56,7 @@ class MultiKeyMultiTTLValueCache(TTL):
 			(self.__timeQueue.peekitem(0)[0] < currTimeNS)
 		):
 			_, item = self.__timeQueue.popitem(0)
-			item: KeyValueItem = item
-			for key in item.GetKeys():
-				poppedItem = self.__keyValueMap.pop(key, None)
-				if poppedItem is None:
-					self.logger.warning(
-						f'Failed to remove key {key} from the lookup table'
-					)
-				item.Terminate()
+			self.__InvalidateItem(item)
 
 	def CleanUpExpired(self) -> None:
 		with self.__storeLock:
@@ -121,14 +126,7 @@ class MultiKeyMultiTTLValueCache(TTL):
 	def Terminate(self) -> None:
 		with self.__storeLock:
 			for _, item in self.__timeQueue.items():
-				item: KeyValueItem = item
-				item.Terminate()
-				for key in item.GetKeys():
-					poppedItem = self.__keyValueMap.pop(key, None)
-					if poppedItem is None:
-						self.logger.warning(
-							f'Failed to remove key {key} from the lookup table'
-						)
+				self.__InvalidateItem(item)
 			self.__timeQueue.clear()
 			self.__keyValueMap.clear()
 
