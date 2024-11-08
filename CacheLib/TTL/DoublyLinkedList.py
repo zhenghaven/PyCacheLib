@@ -96,59 +96,114 @@ class DoublyLinkedList(object):
 	def __repr__(self) -> str:
 		return self.__str__()
 
+	@classmethod
+	def _InsertNodeLeftLockHeld(
+		cls,
+		node: DoublyLinkedListNode,
+		insertPos: DoublyLinkedListNode,
+	) -> None:
+		'''
+		Insert a node to the left of the insertPos node.
+		'''
+		node._prev = insertPos._prev
+		node._next = insertPos
+
+		insertPos._prev._next = node
+		insertPos._prev = node
+
 	def append(self, data: Any) -> DoublyLinkedListNode:
 		with self.__storeLock:
 			newNode = DoublyLinkedListNode()
 			newNode.data = data
 
-			newNode._prev = self.__tail._prev
-			newNode._next = self.__tail
-
-			self.__tail._prev._next = newNode
-			self.__tail._prev = newNode
+			self._InsertNodeLeftLockHeld(newNode, self.__tail)
 
 			return newNode
+
+	@classmethod
+	def _InsertNodeRightLockHeld(
+		cls,
+		node: DoublyLinkedListNode,
+		insertPos: DoublyLinkedListNode,
+	) -> None:
+		'''
+		Insert a node to the right of the insertPos node.
+		'''
+		node._prev = insertPos
+		node._next = insertPos._next
+
+		insertPos._next._prev = node
+		insertPos._next = node
 
 	def appendleft(self, data: Any) -> DoublyLinkedListNode:
 		with self.__storeLock:
 			newNode = DoublyLinkedListNode()
 			newNode.data = data
 
-			newNode._prev = self.__head
-			newNode._next = self.__head._next
-
-			self.__head._next._prev = newNode
-			self.__head._next = newNode
+			self._InsertNodeRightLockHeld(newNode, self.__head)
 
 			return newNode
 
+	def _emptyLockHeld(self) -> bool:
+		return self.__head._next == self.__tail
+
+	@classmethod
+	def _RemoveLockHeld(cls, node: DoublyLinkedListNode) -> None:
+		node._prev._next = node._next
+		node._next._prev = node._prev
+
+		node._prev = None
+		node._next = None
+
 	def pop(self) -> Any:
 		with self.__storeLock:
-			if self.__head._next == self.__tail:
+			if self._emptyLockHeld():
 				raise IndexError('pop from an empty list')
 
 			node = self.__tail._prev
-			node._prev._next = self.__tail
-			self.__tail._prev = node._prev
+			self._RemoveLockHeld(node)
 
 			return node.data
 
 	def popleft(self) -> Any:
 		with self.__storeLock:
-			if self.__head._next == self.__tail:
+			if self._emptyLockHeld():
 				raise IndexError('pop from an empty list')
 
 			node = self.__head._next
-			node._next._prev = self.__head
-			self.__head._next = node._next
+			self._RemoveLockHeld(node)
 
 			return node.data
 
+	def front(self) -> Any:
+		with self.__storeLock:
+			if self._emptyLockHeld():
+				raise IndexError('peek from an empty list')
+
+			return self.__head._next.data
+
+	def back(self) -> Any:
+		with self.__storeLock:
+			if self._emptyLockHeld():
+				raise IndexError('peek from an empty list')
+
+			return self.__tail._prev.data
+
+	def empty(self) -> bool:
+		with self.__storeLock:
+			return self._emptyLockHeld()
+
 	def remove(self, node: DoublyLinkedListNode) -> None:
 		with self.__storeLock:
-			node._prev._next = node._next
-			node._next._prev = node._prev
+			self._RemoveLockHeld(node)
 
-			node._prev = None
-			node._next = None
+	def removeappend(self, node: DoublyLinkedListNode) -> None:
+		with self.__storeLock:
+			self._RemoveLockHeld(node)
+			self._InsertNodeLeftLockHeld(node, self.__tail)
+
+	def removeappendleft(self, node: DoublyLinkedListNode) -> None:
+		with self.__storeLock:
+			self._RemoveLockHeld(node)
+			self._InsertNodeRightLockHeld(node, self.__head)
 

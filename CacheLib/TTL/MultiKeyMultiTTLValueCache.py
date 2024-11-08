@@ -27,24 +27,38 @@ class MultiKeyMultiTTLValueCache(TTL):
 		self.__timeQueue = SortedDict()
 		self.__keyValueMap = dict()
 
-	def CleanUpExpiredLocked(self) -> None:
+	def __RemoveKeysFromLUT(self, keys: list[KeyValueKey]) -> None:
+		for key in keys:
+			poppedItem = self.__keyValueMap.pop(key, None)
+			if poppedItem is None:
+				self.logger.warning(
+					f'Failed to remove key {key} from the lookup table'
+				)
+
+	def __InvalidateItem(self, item: KeyValueItem) -> None:
+		item.Terminate()
+		self.__RemoveKeysFromLUT(item.GetKeys())
+
+	def CleanUpExpiredLocked(self, debugLogTimestamp: bool = False) -> None:
 		currTimeNS = time.time_ns()
+
+		if debugLogTimestamp:
+			oldestExpiredTime = None \
+				if (not self.__timeQueue) \
+					else self.__timeQueue.peekitem(0)[0]
+			self.logger.debug(
+				f'Current time: {currTimeNS}, '
+				f'Oldest expired time: {oldestExpiredTime}'
+			)
+
 		while (
 			(len(self.__timeQueue) > 0) and
 			(self.__timeQueue.peekitem(0)[0] < currTimeNS)
 		):
 			_, item = self.__timeQueue.popitem(0)
-			item: KeyValueItem = item
-			for key in item.GetKeys():
-				poppedItem = self.__keyValueMap.pop(key, None)
-				if poppedItem is None:
-					self.logger.warning(
-						f'Failed to remove key {key} from the lookup table'
-					)
-				item.Terminate()
+			self.__InvalidateItem(item)
 
 	def CleanUpExpired(self) -> None:
-
 		with self.__storeLock:
 			self.CleanUpExpiredLocked()
 
@@ -63,9 +77,14 @@ class MultiKeyMultiTTLValueCache(TTL):
 			self.CleanUpExpiredLocked()
 			return key in self.__keyValueMap
 
-	def Put(self, item: KeyValueItem, raiseIfKeyExist: bool = True) -> None:
+	def Put(
+		self,
+		item: KeyValueItem,
+		raiseIfKeyExist: bool = True,
+		debugLogTimestamp: bool = False,
+	) -> None:
 		with self.__storeLock:
-			self.CleanUpExpiredLocked()
+			self.CleanUpExpiredLocked(debugLogTimestamp=debugLogTimestamp)
 
 			currTimeNS = time.time_ns()
 
@@ -79,32 +98,35 @@ class MultiKeyMultiTTLValueCache(TTL):
 						# The caller wants us to treat this as an normal case
 						return
 
+			expiredTimeNS = currTimeNS + item.GetTTLNanoSec()
+			if debugLogTimestamp:
+				self.logger.debug(
+					f'Current time: {currTimeNS}, '
+					f'Item Key[0]: {keys[0]}, '
+					f'Item TTL: {item.GetTTLNanoSec()}, '
+					f'Expired time: {expiredTimeNS}'
+				)
+
 			# Add the item to the cache
 			for key in keys:
 				self.__keyValueMap[key] = item
-			self.__timeQueue[currTimeNS + item.GetTTLNanoSec()] = item
+			self.__timeQueue[expiredTimeNS] = item
 
 	def Get(
 		self,
 		key: KeyValueKey,
-		default: Union[KeyValueItem, None] = None
+		default: Union[KeyValueItem, None] = None,
+		debugLogTimestamp: bool = False,
 	) -> Union[KeyValueItem, None]:
 		with self.__storeLock:
-			self.CleanUpExpiredLocked()
+			self.CleanUpExpiredLocked(debugLogTimestamp=debugLogTimestamp)
 
 			return self.__keyValueMap.get(key, default)
 
 	def Terminate(self) -> None:
 		with self.__storeLock:
 			for _, item in self.__timeQueue.items():
-				item: KeyValueItem = item
-				item.Terminate()
-				for key in item.GetKeys():
-					poppedItem = self.__keyValueMap.pop(key, None)
-					if poppedItem is None:
-						self.logger.warning(
-							f'Failed to remove key {key} from the lookup table'
-						)
+				self.__InvalidateItem(item)
 			self.__timeQueue.clear()
 			self.__keyValueMap.clear()
 

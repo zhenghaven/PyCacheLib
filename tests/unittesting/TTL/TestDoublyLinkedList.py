@@ -138,7 +138,43 @@ class TestDoublyLinkedList(unittest.TestCase):
 			for nodeInList, dataInDll in zip(nodes, dll):
 				self.assertEqual(nodeInList.data, dataInDll)
 
-	def test_TTL_DoublyLinkedList_07ThreadSafe(self):
+	def test_TTL_DoublyLinkedList_07Peek(self):
+		dll = DoublyLinkedList()
+
+		with self.assertRaises(IndexError):
+			dll.front()
+
+		with self.assertRaises(IndexError):
+			dll.back()
+
+		dll.append(1)
+		self.assertEqual(dll.front(), 1)
+		self.assertEqual(dll.back(), 1)
+
+		dll.append(2)
+		self.assertEqual(dll.front(), 1)
+		self.assertEqual(dll.back(), 2)
+
+		dll.appendleft(3)
+		self.assertEqual(dll.front(), 3)
+		self.assertEqual(dll.back(), 2)
+
+	def test_TTL_DoublyLinkedList_08Empty(self):
+		dll = DoublyLinkedList()
+
+		self.assertTrue(dll.empty())
+
+		dll.append(1)
+		self.assertFalse(dll.empty())
+		dll.pop()
+		self.assertTrue(dll.empty())
+
+		dll.appendleft(2)
+		self.assertFalse(dll.empty())
+		dll.popleft()
+		self.assertTrue(dll.empty())
+
+	def test_TTL_DoublyLinkedList_09ThreadSafe(self):
 		numOfThreads = 10
 		numOfItemsPerThread = 1000
 
@@ -207,4 +243,60 @@ class TestDoublyLinkedList(unittest.TestCase):
 
 		# ensure the list is empty
 		self.assertEqual(len(dll), 0)
+
+	def test_TTL_DoublyLinkedList_10RemoveAppend(self):
+		dll = DoublyLinkedList()
+		node1 = dll.append(1)
+		node2 = dll.append(2)
+		node3 = dll.append(3)
+		node4 = dll.append(4)
+
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [1, 2, 3, 4])
+
+		# remove and then append to right
+		# node1
+		dll.removeappend(node1)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [2, 3, 4, 1])
+		# node2
+		dll.removeappend(node2)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [3, 4, 1, 2])
+		# node3
+		dll.removeappend(node3)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [4, 1, 2, 3])
+		# node4
+		dll.removeappend(node4)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [1, 2, 3, 4])
+		# remove rightmost and then append to right
+		# node4
+		dll.removeappend(node4)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [1, 2, 3, 4])
+
+		# remove and then append to left
+		# node4
+		dll.removeappendleft(node4)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [4, 1, 2, 3])
+		# node3
+		dll.removeappendleft(node3)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [3, 4, 1, 2])
+		# node2
+		dll.removeappendleft(node2)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [2, 3, 4, 1])
+		# node1
+		dll.removeappendleft(node1)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [1, 2, 3, 4])
+		# remove leftmost and then append to left
+		# node1
+		dll.removeappendleft(node1)
+		self.assertEqual(len(dll), 4)
+		self.assertEqual(list(dll), [1, 2, 3, 4])
 
