@@ -27,8 +27,18 @@ class MultiKeyMultiTTLValueCache(TTL):
 		self.__timeQueue = SortedDict()
 		self.__keyValueMap = dict()
 
-	def CleanUpExpiredLocked(self) -> None:
+	def CleanUpExpiredLocked(self, debugLogTimestamp: bool = False) -> None:
 		currTimeNS = time.time_ns()
+
+		if debugLogTimestamp:
+			oldestExpiredTime = None \
+				if (not self.__timeQueue) \
+					else self.__timeQueue.peekitem(0)[0]
+			self.logger.debug(
+				f'Current time: {currTimeNS}, '
+				f'Oldest expired time: {oldestExpiredTime}'
+			)
+
 		while (
 			(len(self.__timeQueue) > 0) and
 			(self.__timeQueue.peekitem(0)[0] < currTimeNS)
@@ -44,7 +54,6 @@ class MultiKeyMultiTTLValueCache(TTL):
 				item.Terminate()
 
 	def CleanUpExpired(self) -> None:
-
 		with self.__storeLock:
 			self.CleanUpExpiredLocked()
 
@@ -63,9 +72,14 @@ class MultiKeyMultiTTLValueCache(TTL):
 			self.CleanUpExpiredLocked()
 			return key in self.__keyValueMap
 
-	def Put(self, item: KeyValueItem, raiseIfKeyExist: bool = True) -> None:
+	def Put(
+		self,
+		item: KeyValueItem,
+		raiseIfKeyExist: bool = True,
+		debugLogTimestamp: bool = False,
+	) -> None:
 		with self.__storeLock:
-			self.CleanUpExpiredLocked()
+			self.CleanUpExpiredLocked(debugLogTimestamp=debugLogTimestamp)
 
 			currTimeNS = time.time_ns()
 
@@ -79,18 +93,28 @@ class MultiKeyMultiTTLValueCache(TTL):
 						# The caller wants us to treat this as an normal case
 						return
 
+			expiredTimeNS = currTimeNS + item.GetTTLNanoSec()
+			if debugLogTimestamp:
+				self.logger.debug(
+					f'Current time: {currTimeNS}, '
+					f'Item Key[0]: {keys[0]}, '
+					f'Item TTL: {item.GetTTLNanoSec()}, '
+					f'Expired time: {expiredTimeNS}'
+				)
+
 			# Add the item to the cache
 			for key in keys:
 				self.__keyValueMap[key] = item
-			self.__timeQueue[currTimeNS + item.GetTTLNanoSec()] = item
+			self.__timeQueue[expiredTimeNS] = item
 
 	def Get(
 		self,
 		key: KeyValueKey,
-		default: Union[KeyValueItem, None] = None
+		default: Union[KeyValueItem, None] = None,
+		debugLogTimestamp: bool = False,
 	) -> Union[KeyValueItem, None]:
 		with self.__storeLock:
-			self.CleanUpExpiredLocked()
+			self.CleanUpExpiredLocked(debugLogTimestamp=debugLogTimestamp)
 
 			return self.__keyValueMap.get(key, default)
 
