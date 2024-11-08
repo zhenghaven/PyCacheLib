@@ -10,7 +10,7 @@
 
 PACKAGE_INFO = {
 	'name': 'CacheLib',
-	'version': '0.1.3',
+	'version': '0.2.0',
 	'author': 'Haofan Zheng',
 	'url': 'https://github.com/zhenghaven/PyCacheLib',
 	'license': 'MIT',
